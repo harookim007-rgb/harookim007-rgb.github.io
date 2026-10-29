@@ -62,7 +62,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .sheet-wrap { zoom: 1 !important; width: auto; }
   .paper.sheet { box-shadow: none; min-height: 0; padding: 0; width: auto; }
   .sheet-wrap { width: auto !important; }
-  .paper .job, .paper .card, .paper .rows > span, .paper h2, .paper li, .paper .proj-top { break-inside: avoid; }
+  .paper .rows > span, .paper h2, .paper li, .paper .proj-top { break-inside: avoid; }
+  .paper .job, .paper .card, .paper .grid2 { break-inside: auto !important; }
+  .paper .job h3, .paper .card h3 { break-after: avoid; }
+  .paper .card p, .paper li { orphans: 2; widows: 2; }
   .paper .proj { break-inside: auto !important; }
   .paper .proj h4, .paper .proj-top, .paper .proj .one { break-after: avoid; }
   .paper .links { break-before: avoid; }
@@ -97,6 +100,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
 .paper .chip { display:inline-block; background:var(--chip); border:1px solid #e3e3e6; border-radius:4px; padding:1px 8px; margin:0 4px 4px 0; font-size:8.4pt; color:#333; }
 .paper .job { display:grid; grid-template-columns:30mm 1fr; padding:11px 0; border-top:1px solid var(--line); break-inside:avoid; }
 .paper .job:first-of-type { border-top:none; }
+.paper .job.cont { border-top:none; padding-top:0; }
+.paper .grid2 + .grid2 { margin-top:10px; }
 .paper .date { color:var(--sub); font-size:8.8pt; }
 .paper .job h3 { margin:0; font-size:10.5pt; }
 .paper .job .pos { color:var(--sub); font-size:8.7pt; margin-bottom:4px; }
@@ -490,9 +495,48 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
     var maxH = probe.page.clientHeight - parseFloat(getComputedStyle(probe.page).paddingTop) - parseFloat(getComputedStyle(probe.page).paddingBottom);
     stage.innerHTML = "";
     var tmp = document.createElement("div"); tmp.innerHTML = html;
+    // 카드 안의 빈 줄(<br><br>)은 문단으로 나눠 두어야 쪽 경계에서 끊을 수 있다
+    Array.prototype.forEach.call(tmp.querySelectorAll(".card p"), function (p) {
+      var parts = p.innerHTML.split(/(?:<br\s*\/?>\s*){2,}/i);
+      if (parts.length < 2) return;
+      parts.forEach(function (h) { var q = document.createElement("p"); q.innerHTML = h; p.parentNode.insertBefore(q, p); });
+      p.remove();
+    });
     var queue = Array.prototype.slice.call(tmp.children);
     var cur = newPage();
     var fits = function () { return cur.flow.scrollHeight <= maxH + 0.5; };
+    // 경력 항목은 줄(li) 단위로, 강점 카드는 문단 단위로 쪽을 나눈다
+    var splitInside = function (n) {
+      var head, rest, i;
+      if (n.classList.contains("job")) {
+        var total = n.querySelectorAll("ul > li").length;
+        head = n.cloneNode(true); cur.flow.appendChild(head);
+        var hl = head.querySelectorAll("ul > li"), keep = total;
+        while (keep > 0 && !fits()) { hl[--keep].remove(); }
+        if (keep < 2 || keep === total) { cur.flow.removeChild(head); return null; }
+        rest = n.cloneNode(true); rest.classList.add("cont");
+        var rl = rest.querySelectorAll("ul > li");
+        for (i = 0; i < keep; i++) rl[i].remove();
+        var h3 = rest.querySelector("h3"); if (h3) h3.remove();
+        var dt = rest.querySelector(".date"); if (dt) dt.textContent = "";
+        return rest;
+      }
+      if (n.classList.contains("grid2") && n.querySelector(".card")) {
+        var cards = n.querySelectorAll(":scope > .card"), max = 0;
+        Array.prototype.forEach.call(cards, function (c) { max = Math.max(max, c.children.length); });
+        head = n.cloneNode(true); cur.flow.appendChild(head);
+        var L = max;
+        while (L > 1 && !fits()) {
+          L--;
+          Array.prototype.forEach.call(head.querySelectorAll(":scope > .card"), function (c) { while (c.children.length > L) c.lastElementChild.remove(); });
+        }
+        if (L < 2 || L === max) { cur.flow.removeChild(head); return null; }
+        rest = n.cloneNode(true); rest.classList.add("cont");
+        Array.prototype.forEach.call(rest.querySelectorAll(":scope > .card"), function (c) { for (var j = 0; j < L && c.firstElementChild; j++) c.firstElementChild.remove(); });
+        return rest;
+      }
+      return null;
+    };
     var guard = 0;
     while (queue.length && guard++ < 2000) {
       var n = queue.shift();
@@ -509,18 +553,29 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
           if (!fits()) { groups[k].forEach(function (c) { part.removeChild(c); }); break; }
         }
         if (k === 0 && wasEmpty) { groups[0].forEach(function (c) { part.appendChild(c); }); k = 1; }
-        var carry = [];
-        if (k === 0) {
-          cur.flow.removeChild(part);
+        var carry = [], rest = null;
+        if (k === 0) cur.flow.removeChild(part);
+        if (k < groups.length) {
+          var row = n.cloneNode(false); groups[k].forEach(function (c) { row.appendChild(c); });
+          rest = splitInside(row);
+          if (rest) groups.slice(k + 1).forEach(function (gr) { gr.forEach(function (c) { rest.appendChild(c); }); });
+        }
+        if (k === 0 && !rest) {
           var last = cur.flow.lastElementChild;
           if (last && last.tagName === "H2") { cur.flow.removeChild(last); carry.push(last); }
         }
-        var rest = n.cloneNode(false);
-        groups.slice(k).forEach(function (gr) { gr.forEach(function (c) { rest.appendChild(c); }); });
+        if (!rest) {
+          rest = n.cloneNode(false);
+          groups.slice(k).forEach(function (gr) { gr.forEach(function (c) { rest.appendChild(c); }); });
+        }
         cur = newPage();
         if (rest.children.length) queue.unshift(rest);
         queue = carry.concat(queue);
         continue;
+      }
+      if (!wasEmpty) {
+        var restIn = splitInside(n);
+        if (restIn) { cur = newPage(); queue.unshift(restIn); continue; }
       }
       if (wasEmpty) { cur.flow.appendChild(n); cur = newPage(); continue; }   // 한 쪽보다 큰 블록은 그대로 둔다
       var carry2 = [];
