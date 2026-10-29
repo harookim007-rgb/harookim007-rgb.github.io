@@ -241,7 +241,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
 
   // 레이아웃 칸은 그대로 두고 글자가 들어 있는 칸만 편집 가능하게 한다
   var FIELDS = "h1, .role, .contact > *, .intro p, h2, .card h3, .card p, .skills .k, .chip, .date, .job h3, li," +
-    " .proj h3, .proj .meta, .proj .one, .proj .stack, .proj p, .rows > span, .way p, .btn, .tag";
+    " .proj h3, .proj h4, .proj .meta, .proj .one, .proj .stack, .proj p, .rows > span, .way p, .btn, .tag";
   function setEditing(on) {
     editing = on;
     sheet.classList.toggle("editing", on);
@@ -332,22 +332,103 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   $("btn-edit").addEventListener("click", function () { setEditing(true); });
   $("btn-cancel").addEventListener("click", function () { setEditing(false); render(); });
 
+  // ── 한글 수정 → 영문 자동 반영 ──
+  // 한글과 영문은 같은 구조(같은 칸, 같은 순서)로 되어 있다.
+  // 바뀌지 않은 칸은 기존 영문을 그대로 쓰고, 새로 쓰거나 고친 칸만 번역한다.
+  function leafList(root) {
+    return Array.prototype.filter.call(root.querySelectorAll(FIELDS), function (el) {
+      var a = el.parentElement;
+      while (a && a !== root) { if (a.matches(FIELDS)) return false; a = a.parentElement; }
+      return true;
+    });
+  }
+  function toRoot(html) { var d = document.createElement("div"); d.innerHTML = html; return d; }
+
+  // 두 목록에서 같은 칸끼리 짝을 짓는다 (LCS)
+  function align(a, b) {
+    var n = a.length, m = b.length, i, j, dp = [];
+    for (i = 0; i <= n; i++) { dp.push(new Array(m + 1).fill(0)); }
+    for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--)
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    var map = {}; i = 0; j = 0;
+    while (i < n && j < m) {
+      if (a[i] === b[j]) { map[j] = i; i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) i++; else j++;
+    }
+    return map;
+  }
+
+  var HANGUL = /[가-힣]/;
+  function translateText(text) {
+    text = text.trim();
+    if (!text || !HANGUL.test(text)) return Promise.resolve(text);
+    var parts = text.match(/[^.!?]+[.!?]*\s*/g) || [text], chunks = [], cur = "";
+    parts.forEach(function (p) { if ((cur + p).length > 450 && cur) { chunks.push(cur); cur = ""; } cur += p; });
+    if (cur) chunks.push(cur);
+    return Promise.all(chunks.map(function (c) {
+      var url = "https://api.mymemory.translated.net/get?langpair=ko|en&q=" + encodeURIComponent(c.trim());
+      return fetch(url).then(function (r) { return r.json(); }).then(function (j) {
+        var out = j && j.responseData && j.responseData.translatedText;
+        if (!out || j.responseStatus !== 200) throw new Error("translate");
+        return out;
+      });
+    })).then(function (arr) { return arr.join(" "); });
+  }
+  // <br> 줄바꿈 위치는 그대로 두고, 줄마다 번역
+  function translateHtml(html) {
+    var lines = html.split(/<br\s*\/?>/i);
+    return Promise.all(lines.map(function (line) {
+      var d = document.createElement("div"); d.innerHTML = line;
+      var whole = d.children.length === 1 && d.firstElementChild.tagName === "B" && d.textContent.trim() === d.firstElementChild.textContent.trim();
+      return translateText(d.textContent).then(function (t) { return whole ? "<b>" + t + "</b>" : t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); });
+    })).then(function (arr) { return arr.join("<br>"); });
+  }
+
+  function syncEnglish(oldKo, newKo, oldEn) {
+    var ok = leafList(toRoot(oldKo)), en = leafList(toRoot(oldEn));
+    if (ok.length !== en.length) return Promise.reject(new Error("structure"));
+    var nkRoot = toRoot(newKo), nk = leafList(nkRoot);
+    var map = align(ok.map(function (e) { return e.innerHTML; }), nk.map(function (e) { return e.innerHTML; }));
+    var outRoot = toRoot(newKo), out = leafList(outRoot), failed = 0, jobs = [];
+    out.forEach(function (el, idx) {
+      if (map[idx] !== undefined) { el.innerHTML = en[map[idx]].innerHTML; return; }
+      jobs.push(translateHtml(nk[idx].innerHTML).then(function (t) { el.innerHTML = t; })
+        .catch(function () { failed++; }));
+    });
+    outRoot.querySelectorAll("img").forEach(function (img) { img.setAttribute("alt", ""); });
+    return Promise.all(jobs).then(function () { return { html: outRoot.innerHTML, translated: jobs.length, failed: failed }; });
+  }
+
   $("btn-save").addEventListener("click", function () {
     if (busy) return;
     if (selLink) selLink.classList.remove("sel");
     var html = clean(sheet.innerHTML);
     var next = JSON.parse(JSON.stringify(state)); next[lang] = html; next.version = (state.version || 1) + 1;
-    busy = true; $("btn-save").disabled = true; setStatus(t("saving"));
+    busy = true; $("btn-save").disabled = true;
     var saveLang = lang;
-    try {
-      localStorage.setItem("resume-state", JSON.stringify(next));
-      state = next; unstore("resume-draft-" + saveLang);
-      setEditing(false); render(); setStatus(TEXT[saveLang].savedLocal, "ok");
-    } catch (err) {
-      setEditing(false); render(); setStatus(TEXT[saveLang].saveFail, "err");
+    var step = Promise.resolve(null);
+    if (saveLang === "ko" && html !== state.ko) {
+      setStatus("저장하고 영문을 맞추는 중입니다");
+      step = syncEnglish(state.ko, html, state.en).then(function (r) { next.en = r.html; return r; })
+        .catch(function () { return { structureError: true }; });
+    } else {
+      setStatus(t("saving"));
     }
-    Promise.resolve(    ).then(function () { busy = false; $("btn-save").disabled = false; });
+    step.then(function (r) {
+      try {
+        localStorage.setItem("resume-state", JSON.stringify(next));
+      } catch (err) {
+        setEditing(false); render(); setStatus(TEXT[saveLang].saveFail, "err"); return;
+      }
+      state = next; unstore("resume-draft-" + saveLang);
+      setEditing(false); render();
+      if (!r) { setStatus(TEXT[saveLang].savedLocal, "ok"); return; }
+      if (r.structureError) { setStatus("한글은 저장했지만 영문 구조가 달라 자동 반영하지 못했습니다.", "err"); return; }
+      if (r.failed) { setStatus("저장했습니다. 영문 " + r.failed + "칸은 번역하지 못해 English 화면에서 직접 고쳐 주세요.", "err"); return; }
+      setStatus("저장했습니다. 영문도 같은 구조로 반영했습니다" + (r.translated ? " (새로 번역한 칸 " + r.translated + "개)" : "") + ".", "ok");
+    }).then(function () { busy = false; $("btn-save").disabled = false; });
   });
+
 
   function getCap(name) {
     if (!window.claude || typeof window.claude.use !== "function") return Promise.resolve(null);
