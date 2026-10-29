@@ -54,7 +54,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
 .paper.page { width: 210mm; height: 297mm; padding: 16mm 15mm; overflow: hidden; }
 .paper.page .proj + .proj, .paper.page .flow > .proj:first-child { margin-top: 0; }
 @media (prefers-reduced-motion: no-preference) { .b, .seg button { transition: background .15s, color .15s; } }
-@page { size: A4; margin: 14mm 15mm; }
+@page { size: A4; margin: 16mm 15mm; }
 @media print {
   body { background: #fff !important; }
   .bar, #stage, .toast { display: none !important; }
@@ -62,7 +62,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
   .sheet-wrap { zoom: 1 !important; width: auto; }
   .paper.sheet { box-shadow: none; min-height: 0; padding: 0; width: auto; }
   .sheet-wrap { width: auto !important; }
-  .paper .proj, .paper .job, .paper .card, .paper .rows > span, .paper h2 { break-inside: avoid; }
+  .paper .job, .paper .card, .paper .rows > span, .paper h2, .paper li, .paper .proj-top { break-inside: avoid; }
+  .paper .proj { break-inside: auto !important; }
+  .paper .proj h4, .paper .proj-top, .paper .proj .one { break-after: avoid; }
+  .paper .links { break-before: avoid; }
   .paper h2 { break-after: avoid; }
 }
 /* résumé sheet: always printed-paper colors */
@@ -446,14 +449,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); out
     var kids = Array.prototype.slice.call(el.children), groups = [], g = groupSize(el), i;
     if (g) { for (i = 0; i < kids.length; i += g) groups.push(kids.slice(i, i + g)); return groups; }
     if (el.classList && el.classList.contains("proj")) {
-      var curG = [], seenH4 = 0;
+      // 소제목(h4)은 바로 다음 내용과, 링크 버튼은 바로 앞 내용과 같은 쪽에 둔다
+      var cur = [];
       kids.forEach(function (c) {
-        if (c.tagName === "H4") { seenH4++; if (seenH4 > 1) { groups.push(curG); curG = []; } }
-        curG.push(c);
+        var head = c.classList.contains("proj-top") || c.classList.contains("one") || c.classList.contains("stack") || c.classList.contains("tag") || c.classList.contains("meta");
+        if (c.classList.contains("links") || head || (cur.length && cur[cur.length - 1].tagName === "H4") || (cur.length && cur.every(function (x) { return x.classList.contains("proj-top") || x.classList.contains("one") || x.classList.contains("stack") || x.classList.contains("tag") || x.classList.contains("meta") || x.tagName === "H3"; }))) {
+          cur.push(c);
+        } else {
+          if (cur.length) groups.push(cur);
+          cur = [c];
+        }
       });
-      if (curG.length) groups.push(curG);
-      var last = groups[groups.length - 1];
-      if (groups.length > 1 && last.length === 1 && last[0].classList.contains("links")) { groups[groups.length - 2].push(last[0]); groups.pop(); }
+      if (cur.length) groups.push(cur);
       return groups;
     }
     return null;
