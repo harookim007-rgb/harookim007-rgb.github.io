@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>김하루 이력서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: a quiet desk surface with a sticky toolbar; the A4 sheet sits centered and keeps the printed look in every theme. */
+:root {
+  --desk: #eceae6; --bar: #fbfaf8; --bar-line: #dcd8d2; --text: #26231f; --text-soft: #6b665f;
+  --accent: #C8501E; --accent-ink: #ffffff; --focus: #1f6feb; --ok: #2e7d4f; --warn: #b3261e;
+  --ui: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --desk: #1b1a19; --bar: #252321; --bar-line: #3a3733; --text: #ece8e2; --text-soft: #a8a199;
+  --accent: #e0703f; --accent-ink: #1b1a19; --focus: #6aa6ff; --ok: #6cc28f; --warn: #ff8a80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --desk: #1b1a19; --bar: #252321; --bar-line: #3a3733; --text: #ece8e2; --text-soft: #a8a199;
+  --accent: #e0703f; --accent-ink: #1b1a19; --focus: #6aa6ff; --ok: #6cc28f; --warn: #ff8a80; color-scheme: dark }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--desk); color: var(--text); font-family: var(--ui); margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bar); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bar); border-bottom: 1px solid var(--bar-line);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-in { max-width: 210mm; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--bar-line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: transparent; color: var(--text-soft); padding: 7px 14px; font: 600 13px var(--ui); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--bar); }
+.sp { flex: 1; }
+.b { border: 1px solid var(--bar-line); background: transparent; color: var(--text); border-radius: 8px; padding: 7px 14px; font: 600 13px var(--ui); cursor: pointer; }
+.b.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.b:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.status { width: 100%; font-size: 12.5px; color: var(--text-soft); min-height: 18px; }
+.status.ok { color: var(--ok); } .status.err { color: var(--warn); }
+.linkbar { width: 100%; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.linkbar input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--bar-line); border-radius: 6px; background: var(--desk); color: var(--text); font: 13px var(--ui); }
+.desk { padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow-x: hidden; }
+.sheet-wrap { margin: 0 auto; width: 210mm; transform-origin: top left; }
+.paper.sheet { width: 210mm; min-height: 297mm; padding: 16mm 15mm; box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 8px 28px rgba(0,0,0,.10); }
+.paper.sheet.editing { outline: 2px dashed var(--accent); outline-offset: 6px; }
+.paper.sheet.editing [contenteditable="true"] { border-radius: 2px; }
+.paper.sheet.editing [contenteditable="true"]:hover { background: rgba(31, 111, 235, .06); }
+.paper.sheet.editing [contenteditable="true"]:focus { outline: 1.5px solid var(--focus); outline-offset: 1px; background: rgba(31, 111, 235, .04); }
+.paper.sheet.editing a { cursor: text; }
+.paper.sheet.editing a.sel { box-shadow: 0 0 0 2px var(--focus); }
+.loading { text-align: center; color: var(--text-soft); padding: 80px 0; font-size: 14px; }
+#stage { position: fixed; left: -10000px; top: 0; }
+.paper.page { width: 210mm; height: 297mm; padding: 16mm 15mm; overflow: hidden; }
+.paper.page .proj + .proj, .paper.page .flow > .proj:first-child { margin-top: 0; }
+@media (prefers-reduced-motion: no-preference) { .b, .seg button { transition: background .15s, color .15s; } }
+@page { size: A4; margin: 14mm 15mm; }
+@media print {
+  body { background: #fff !important; }
+  .bar, #stage, .toast { display: none !important; }
+  .desk { padding: 0 !important; }
+  .sheet-wrap { zoom: 1 !important; width: auto; }
+  .paper.sheet { box-shadow: none; min-height: 0; padding: 0; width: auto; }
+  .sheet-wrap { width: auto !important; }
+  .paper .proj, .paper .job, .paper .card, .paper .rows > span, .paper h2 { break-inside: avoid; }
+  .paper h2 { break-after: avoid; }
+}
+/* résumé sheet: always printed-paper colors */
+.paper .proj-top { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.paper .proj-top h3 { margin:0 !important; }
+.paper .proj .one { margin:3px 0 2px !important; }
+.paper .proj .stack { font-size:8.3pt; color:var(--sub) !important; margin:0 0 3px !important; }
+.paper .proj ul { margin-top:2px; }
+.paper .proj .links { margin-top:7px; }
+.paper { --accent:#C8501E; --ink:#1d1d1f; --sub:#55585e; --muted:#8a8d93; --line:#e4e4e7; --chip:#f1f1f3; }
+.paper { font-family:"Noto Sans KR","Noto Sans CJK KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif; color:var(--ink); font-size:9.3pt; line-height:1.62; background:#fff; word-break:keep-all; }
+.paper a { color:inherit; text-decoration:none; }
+.paper .head { display:flex; justify-content:space-between; align-items:flex-start; }
+.paper h1 { font-size:27pt; margin:0; font-weight:800; letter-spacing:-0.5px; line-height:1.15; }
+.paper .role { color:var(--accent); font-weight:700; font-size:11pt; margin:4px 0 12px; }
+.paper .photo { width:27mm; height:36mm; object-fit:cover; border:1px solid var(--line); }
+.paper .contact { display:grid; grid-template-columns:14mm 58mm 14mm auto; row-gap:3px; font-size:8.8pt; }
+.paper .contact .k { color:var(--muted); }
+.paper .intro { margin-top:14px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+.paper .intro p { margin:0 0 7px; color:#2b2b2e; }
+.paper h2 { color:var(--accent); font-size:14pt; margin:20px 0 10px; font-weight:800; display:flex; justify-content:space-between; align-items:baseline; break-after:avoid; }
+.paper h2 small { color:var(--muted); font-size:8.5pt; font-weight:400; }
+.paper .grid2 { display:grid; grid-template-columns:1fr 1fr; column-gap:22px; row-gap:14px; }
+.paper .card h3 { font-size:9.8pt; margin:0 0 6px; padding-bottom:5px; border-bottom:1px solid var(--line); }
+.paper .card p { margin:0 0 5px; color:#333; }
+.paper .card { break-inside:avoid; }
+.paper .skills { display:grid; grid-template-columns:30mm 1fr; row-gap:7px; }
+.paper .skills .k { font-weight:700; font-size:9pt; padding-top:2px; }
+.paper .chip { display:inline-block; background:var(--chip); border:1px solid #e3e3e6; border-radius:4px; padding:1px 8px; margin:0 4px 4px 0; font-size:8.4pt; color:#333; }
+.paper .job { display:grid; grid-template-columns:30mm 1fr; padding:11px 0; border-top:1px solid var(--line); break-inside:avoid; }
+.paper .job:first-of-type { border-top:none; }
+.paper .date { color:var(--sub); font-size:8.8pt; }
+.paper .job h3 { margin:0; font-size:10.5pt; }
+.paper .job .pos { color:var(--sub); font-size:8.7pt; margin-bottom:4px; }
+.paper .grp { font-weight:700; font-size:8.8pt; margin:7px 0 2px; color:#333; }
+.paper ul { margin:2px 0 0; padding-left:15px; }
+.paper li { margin:1.5px 0; }
+.paper li::marker { color:var(--accent); }
+.paper .proj { border:1px solid var(--line); border-radius:6px; padding:12px 14px; margin-bottom:12px; break-inside:avoid; }
+.paper .tag { display:inline-block; background:#fbe9e1; color:var(--accent); font-weight:700; font-size:7.8pt; padding:1px 7px; border-radius:3px; margin-right:6px; }
+.paper .proj .meta { color:var(--muted); font-size:8.4pt; }
+.paper .proj h3 { margin:6px 0 4px; font-size:10.5pt; }
+.paper .proj h4 { font-size:8.8pt; margin:8px 0 1px; color:#333; }
+.paper .proj p { margin:0; color:#333; }
+.paper .links { margin-top:9px; }
+.paper .btn { display:inline-block; background:var(--accent); color:#fff !important; font-weight:700; font-size:8.2pt; padding:3px 11px; border-radius:4px; margin-right:6px; border:1px solid var(--accent); }
+.paper .btn.ghost { background:#fff; color:var(--accent) !important; }
+.paper .proj p + p { margin-top:4px; }
+.paper .proj b { color:var(--ink); }
+.paper .proj p.what { background:#faf6f3; border-left:3px solid var(--accent); padding:6px 10px; margin:4px 0 2px; color:#333; }
+.paper .rows { display:grid; grid-template-columns:30mm 1fr auto; row-gap:4px; }
+.paper .rows .r { color:var(--muted); text-align:right; font-size:8.6pt; }
+.paper .way p { margin:0 0 7px; color:#2b2b2e; }
+.paper .way b { color:var(--ink); }
+.paper .way p.closing { margin-top:10px; }
+.paper .card.wide { grid-column:1 / span 2; }
+.paper .card p, .paper .card li { font-size:8.8pt; line-height:1.52; }
+.paper .card h3 { margin-bottom:4px; padding-bottom:4px; }
+.paper .head + .intro { margin-top:8px; }
+.paper .card p { margin:0 0 4px; }
+.paper .intro p { margin:0 0 4px; line-height:1.55; }
+.paper .grid2 { row-gap:10px; }
+.paper .intro { margin-top:10px; padding-bottom:8px; }
+.paper h2 { margin:14px 0 8px; }
+.paper .job h3 { margin-bottom:4px; }
+.paper .team { font-weight:500; font-size:9pt; color:var(--sub); margin-left:8px; padding-left:8px; border-left:1px solid #ccc; }
+.paper .card ul { margin:2px 0 5px; }
+</style>
+</head>
+<body>
+
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="seg" role="group" aria-label="언어">
+      <button id="lang-ko" type="button" aria-pressed="true">한국어</button>
+      <button id="lang-en" type="button" aria-pressed="false">English</button>
+    </div>
+    <span class="sp"></span>
+    <button id="btn-edit" class="b" type="button">수정</button>
+    <button id="btn-bold" class="b" type="button" hidden title="굵게 (Ctrl+B)"><b>B</b></button>
+    <button id="btn-cancel" class="b" type="button" hidden>취소</button>
+    <button id="btn-save" class="b" type="button" hidden>저장</button>
+    <button id="btn-print" class="b" type="button">인쇄 · 텍스트 PDF</button>
+    <button id="btn-pdf" class="b primary" type="button">PDF 다운로드</button>
+    <div id="linkbar" class="linkbar" hidden>
+      <label for="link-url">링크 주소</label>
+      <input id="link-url" type="url" spellcheck="false">
+      <button id="link-apply" class="b" type="button">적용</button>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+  </div>
+</header>
+
+<main class="desk">
+  <div class="sheet-wrap" id="wrap">
+    <article id="sheet" class="paper sheet"><div class="loading">이력서를 불러오는 중입니다</div></article>
+  </div>
+</main>
+<div id="stage" aria-hidden="true"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var DATA_PATH = "data/resume.json";
+  var TEXT = {
+    ko: { edit: "수정", cancel: "취소", save: "저장", pdf: "PDF 다운로드", link: "링크 주소", apply: "적용",
+      editing: "수정 중입니다. 글자를 눌러 고치세요. 목록에서 Enter는 새 항목, 빈 항목에서 Backspace는 항목 삭제, B 버튼(Ctrl+B)은 굵게입니다. 링크·버튼을 누르면 위에서 주소를 바꿀 수 있어요.",
+      saved: "", savedLocal: "이 브라우저에 저장했습니다. 다음에 열어도 수정본이 보입니다.", saveFail: "저장하지 못했습니다. 브라우저의 사이트 데이터 저장이 막혀 있는지 확인해 주세요.", reset: "처음 내용으로 되돌렸습니다.", saving: "저장하는 중입니다",
+      local: "이 기기에만 임시 저장했습니다. 다른 기기나 사람에게는 보이지 않습니다.",
+      noWrite: "이 이력서를 저장할 권한이 없습니다. 이 기기에만 임시 저장했습니다.",
+      conflict: "다른 곳에서 먼저 저장해 최신본을 다시 불러옵니다.",
+      building: "PDF를 만드는 중입니다", pdfOk: "PDF를 저장했습니다.", pdfNo: "이 화면에서는 파일 저장을 쓸 수 없습니다.",
+      pdfDeclined: "저장을 취소했습니다.", pdfFail: "PDF를 만들지 못했습니다. 잠시 후 다시 눌러 주세요.",
+      libs: "PDF 도구를 불러오지 못했습니다. 페이지를 새로고침해 주세요.", loadFail: "이력서 내용을 불러오지 못했습니다." ,
+      filename: "김하루_이력서.pdf" },
+    en: { edit: "Edit", cancel: "Cancel", save: "Save", pdf: "Download PDF", link: "Link URL", apply: "Apply",
+      editing: "Editing. Click text to change it. In lists, Enter adds an item and Backspace on an empty item removes it. B (Ctrl+B) toggles bold. Click a link or button to change its URL above.",
+      saved: "", savedLocal: "Saved in this browser. You will see your edits next time.", saveFail: "Could not save. Check that site data is allowed in this browser.", reset: "Restored the original content.", saving: "Saving",
+      local: "Saved on this device only. Other devices and people will not see it.",
+      noWrite: "You do not have permission to save this résumé. Saved on this device only.",
+      conflict: "A newer version was saved elsewhere. Reloading it.",
+      building: "Building the PDF", pdfOk: "PDF saved.", pdfNo: "File saving is not available in this view.",
+      pdfDeclined: "Save cancelled.", pdfFail: "Could not build the PDF. Please try again.",
+      libs: "The PDF tools did not load. Please reload the page.", loadFail: "Could not load the résumé content.",
+      filename: "Haru_Kim_Resume.pdf" }
+  };
+  var state = null, lang = "ko", editing = false, selLink = null, busy = false;
+  var $ = function (id) { return document.getElementById(id); };
+  var sheet = $("sheet"), wrap = $("wrap"), stage = $("stage"), statusEl = $("status");
+
+  function t(k) { return TEXT[lang][k]; }
+  function setStatus(msg, kind) { statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " " + kind : ""); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function unstore(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+  // 저장된 HTML 에서 실행될 수 있는 것(스크립트 · 이벤트 속성 · javascript: 링크)을 걷어낸다
+  function clean(html) {
+    var doc = new DOMParser().parseFromString("<div>" + html + "</div>", "text/html");
+    var root = doc.body.firstChild;
+    root.querySelectorAll("script,style,iframe,object,embed,link,meta").forEach(function (n) { n.remove(); });
+    root.querySelectorAll("*").forEach(function (el) {
+      Array.prototype.slice.call(el.attributes).forEach(function (a) {
+        var n = a.name.toLowerCase();
+        if (n.indexOf("on") === 0 || n === "contenteditable" || n === "spellcheck") el.removeAttribute(a.name);
+        if ((n === "href" || n === "src") && /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
+      });
+      el.classList && el.classList.remove("sel");
+      if (el.getAttribute && el.getAttribute("class") === "") el.removeAttribute("class");
+    });
+    return root.innerHTML;
+  }
+
+  function fit() {
+    var avail = document.documentElement.clientWidth - 32;
+    var full = sheet.offsetWidth || 794;
+    var z = Math.min(1, avail / full);
+    wrap.style.zoom = z < 1 ? String(z) : "";
+  }
+
+  function render() {
+    document.documentElement.lang = lang;
+    $("lang-ko").setAttribute("aria-pressed", String(lang === "ko"));
+    $("lang-en").setAttribute("aria-pressed", String(lang === "en"));
+    ["edit", "cancel", "save", "pdf"].forEach(function (k) { $("btn-" + k).textContent = t(k); });
+    document.querySelector('label[for="link-url"]').textContent = t("link");
+    $("link-apply").textContent = t("apply");
+    if (!state) return;
+    var draft = store("resume-draft-" + lang);
+    sheet.innerHTML = clean(draft || state[lang]);
+    sheet.querySelectorAll("a[href]").forEach(function (a) { a.target = "_blank"; a.rel = "noopener"; });
+    fit();
+  }
+
+  // 레이아웃 칸은 그대로 두고 글자가 들어 있는 칸만 편집 가능하게 한다
+  var FIELDS = "h1, .role, .contact > *, .intro p, h2, .card h3, .card p, .skills .k, .chip, .date, .job h3, li," +
+    " .proj h3, .proj .meta, .proj .one, .proj .stack, .proj p, .rows > span, .way p, .btn, .tag";
+  function setEditing(on) {
+    editing = on;
+    sheet.classList.toggle("editing", on);
+    sheet.querySelectorAll(FIELDS).forEach(function (el) {
+      if (on && el.parentElement.closest("[contenteditable='true']")) return;
+      if (on) { el.contentEditable = "true"; el.spellcheck = false; } else el.removeAttribute("contenteditable");
+    });
+    $("btn-edit").hidden = on; $("btn-cancel").hidden = !on; $("btn-save").hidden = !on; $("btn-bold").hidden = !on;
+    $("btn-pdf").disabled = on;
+    $("lang-ko").disabled = on; $("lang-en").disabled = on;
+    $("linkbar").hidden = true; selLink = null;
+    setStatus(on ? t("editing") : "");
+  }
+
+  function caretAtStart(el) {
+    var s = window.getSelection();
+    if (!s.rangeCount || !s.isCollapsed) return false;
+    var r = document.createRange();
+    r.selectNodeContents(el); r.setEnd(s.getRangeAt(0).startContainer, s.getRangeAt(0).startOffset);
+    return r.toString().length === 0;
+  }
+  function focusEnd(el) {
+    el.focus();
+    var r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+
+  // Enter: 목록이면 새 항목, 그 밖에는 줄바꿈 / Backspace: 빈 항목에서 누르면 항목 삭제
+  sheet.addEventListener("keydown", function (e) {
+    if (!editing) return;
+    var el = e.target.closest && e.target.closest("[contenteditable='true']");
+    if (!el) return;
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+      e.preventDefault(); document.execCommand("bold"); return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (el.tagName === "LI" && !e.shiftKey) {
+        var li = document.createElement("li");
+        li.contentEditable = "true"; li.spellcheck = false; li.innerHTML = "<br>";
+        el.after(li); li.focus();
+      } else {
+        if (!document.execCommand("insertLineBreak")) document.execCommand("insertHTML", false, "<br>");
+      }
+      return;
+    }
+    if (e.key === "Backspace" && el.tagName === "LI" && el.textContent.trim() === "" && caretAtStart(el)) {
+      e.preventDefault();
+      var prev = el.previousElementSibling, next = el.nextElementSibling;
+      if (!prev && !next) return;
+      el.remove(); focusEnd(prev || next);
+    }
+  });
+
+  $("btn-bold").addEventListener("mousedown", function (e) { e.preventDefault(); });
+  $("btn-bold").addEventListener("click", function () {
+    try { document.execCommand("styleWithCSS", false, false); } catch (err) {}
+    document.execCommand("bold");
+  });
+
+  sheet.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a");
+    if (!a) return;
+    if (editing) {
+      e.preventDefault();
+      if (selLink) selLink.classList.remove("sel");
+      selLink = a; a.classList.add("sel");
+      $("link-url").value = a.getAttribute("href") || "";
+      $("linkbar").hidden = false;
+    }
+  });
+  $("link-apply").addEventListener("click", function () {
+    if (!selLink) return;
+    var v = $("link-url").value.trim();
+    if (v && !/^\s*javascript:/i.test(v)) selLink.setAttribute("href", v);
+    selLink.classList.remove("sel"); selLink = null; $("linkbar").hidden = true;
+  });
+  // 붙여넣기는 서식 없이 글자만 (다른 문서의 글꼴 · 색이 섞이지 않게)
+  sheet.addEventListener("paste", function (e) {
+    if (!editing) return;
+    e.preventDefault();
+    var txt = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, txt);
+  });
+
+  $("lang-ko").addEventListener("click", function () { lang = "ko"; store("resume-lang", lang); render(); setStatus(""); });
+  $("lang-en").addEventListener("click", function () { lang = "en"; store("resume-lang", lang); render(); setStatus(""); });
+  $("btn-edit").addEventListener("click", function () { setEditing(true); });
+  $("btn-cancel").addEventListener("click", function () { setEditing(false); render(); });
+
+  $("btn-save").addEventListener("click", function () {
+    if (busy) return;
+    if (selLink) selLink.classList.remove("sel");
+    var html = clean(sheet.innerHTML);
+    var next = JSON.parse(JSON.stringify(state)); next[lang] = html; next.version = (state.version || 1) + 1;
+    busy = true; $("btn-save").disabled = true; setStatus(t("saving"));
+    var saveLang = lang;
+    try {
+      localStorage.setItem("resume-state", JSON.stringify(next));
+      state = next; unstore("resume-draft-" + saveLang);
+      setEditing(false); render(); setStatus(TEXT[saveLang].savedLocal, "ok");
+    } catch (err) {
+      setEditing(false); render(); setStatus(TEXT[saveLang].saveFail, "err");
+    }
+    Promise.resolve(    ).then(function () { busy = false; $("btn-save").disabled = false; });
+  });
+
+  function getCap(name) {
+    if (!window.claude || typeof window.claude.use !== "function") return Promise.resolve(null);
+    return window.claude.use(name).catch(function () { return null; });
+  }
+
+  // ── PDF: A4 쪽마다 블록을 채워 넣고, 각 쪽을 그림으로 만든 뒤 링크 영역을 다시 얹는다 ──
+  var GROUP = { "grid2": 2, "skills": 2, "rows": 3, "intro": 1, "way": 1 };
+  function groupSize(el) {
+    for (var c in GROUP) if (el.classList && el.classList.contains(c)) return GROUP[c];
+    return 0;
+  }
+  // 쪽을 넘길 때 나눌 수 있는 단위. 프로젝트 카드는 소제목(h4) 단위로 나눈다
+  function splitGroups(el) {
+    var kids = Array.prototype.slice.call(el.children), groups = [], g = groupSize(el), i;
+    if (g) { for (i = 0; i < kids.length; i += g) groups.push(kids.slice(i, i + g)); return groups; }
+    if (el.classList && el.classList.contains("proj")) {
+      var curG = [], seenH4 = 0;
+      kids.forEach(function (c) {
+        if (c.tagName === "H4") { seenH4++; if (seenH4 > 1) { groups.push(curG); curG = []; } }
+        curG.push(c);
+      });
+      if (curG.length) groups.push(curG);
+      var last = groups[groups.length - 1];
+      if (groups.length > 1 && last.length === 1 && last[0].classList.contains("links")) { groups[groups.length - 2].push(last[0]); groups.pop(); }
+      return groups;
+    }
+    return null;
+  }
+  function newPage() {
+    var p = document.createElement("div"); p.className = "paper page";
+    var f = document.createElement("div"); f.className = "flow";
+    p.appendChild(f); stage.appendChild(p); return { page: p, flow: f };
+  }
+  function paginate(html) {
+    stage.innerHTML = "";
+    var probe = newPage();
+    var maxH = probe.page.clientHeight - parseFloat(getComputedStyle(probe.page).paddingTop) - parseFloat(getComputedStyle(probe.page).paddingBottom);
+    stage.innerHTML = "";
+    var tmp = document.createElement("div"); tmp.innerHTML = html;
+    var queue = Array.prototype.slice.call(tmp.children);
+    var cur = newPage();
+    var fits = function () { return cur.flow.scrollHeight <= maxH + 0.5; };
+    var guard = 0;
+    while (queue.length && guard++ < 2000) {
+      var n = queue.shift();
+      var wasEmpty = cur.flow.children.length === 0;
+      cur.flow.appendChild(n);
+      if (fits()) continue;
+      cur.flow.removeChild(n);
+      var groups = splitGroups(n);
+      if (groups && groups.length > 1) {
+        var part = n.cloneNode(false); cur.flow.appendChild(part);
+        var k = 0;
+        for (; k < groups.length; k++) {
+          groups[k].forEach(function (c) { part.appendChild(c); });
+          if (!fits()) { groups[k].forEach(function (c) { part.removeChild(c); }); break; }
+        }
+        if (k === 0 && wasEmpty) { groups[0].forEach(function (c) { part.appendChild(c); }); k = 1; }
+        var carry = [];
+        if (k === 0) {
+          cur.flow.removeChild(part);
+          var last = cur.flow.lastElementChild;
+          if (last && last.tagName === "H2") { cur.flow.removeChild(last); carry.push(last); }
+        }
+        var rest = n.cloneNode(false);
+        groups.slice(k).forEach(function (gr) { gr.forEach(function (c) { rest.appendChild(c); }); });
+        cur = newPage();
+        if (rest.children.length) queue.unshift(rest);
+        queue = carry.concat(queue);
+        continue;
+      }
+      if (wasEmpty) { cur.flow.appendChild(n); cur = newPage(); continue; }   // 한 쪽보다 큰 블록은 그대로 둔다
+      var carry2 = [];
+      var last2 = cur.flow.lastElementChild;
+      if (last2 && last2.tagName === "H2") { cur.flow.removeChild(last2); carry2.push(last2); }
+      cur = newPage();
+      queue = carry2.concat([n], queue);
+    }
+    Array.prototype.slice.call(stage.children).forEach(function (p) { if (!p.firstChild.children.length) p.remove(); });
+    return Array.prototype.slice.call(stage.children);
+  }
+
+  function waitImages(root) {
+    return Promise.all(Array.prototype.map.call(root.querySelectorAll("img"), function (img) {
+      return img.complete ? Promise.resolve() : new Promise(function (r) { img.onload = img.onerror = r; });
+    }));
+  }
+
+  $("btn-pdf").addEventListener("click", function () {
+    if (busy || !state) return;
+    if (!window.html2canvas || !window.jspdf) { setStatus(t("libs"), "err"); return; }
+    busy = true; $("btn-pdf").disabled = true; setStatus(t("building"));
+    var filename = t("filename");
+    var pages;
+    Promise.resolve(null).then(function (dl) {
+      return (document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+        pages = paginate(clean(sheet.innerHTML));
+        return waitImages(stage);
+      }).then(function () {
+        var pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4", compress: true });
+        var W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight();
+        var chain = Promise.resolve();
+        pages.forEach(function (p, idx) {
+          chain = chain.then(function () {
+            return window.html2canvas(p, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+          }).then(function (canvas) {
+            if (idx > 0) pdf.addPage();
+            pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H, undefined, "FAST");
+            var pr = p.getBoundingClientRect(), k = W / pr.width;
+            p.querySelectorAll("a[href]").forEach(function (a) {
+              Array.prototype.forEach.call(a.getClientRects(), function (r) {
+                pdf.link((r.left - pr.left) * k, (r.top - pr.top) * k, r.width * k, r.height * k, { url: a.getAttribute("href") });
+              });
+            });
+          });
+        });
+        return chain.then(function () {
+          pdf.setProperties({ title: filename.replace(/\.pdf$/, ""), author: lang === "ko" ? "김하루" : "Haru Kim" });
+          pdf.save(filename);
+        });
+      });
+    }).then(function () { setStatus(t("pdfOk"), "ok"); })
+      .catch(function (err) {
+        var code = err && err.code;
+        if (code === "declined") setStatus(t("pdfDeclined"));
+        else if (code === "unavailable" || code === "not_granted" || code === "capability_disabled") setStatus(t("pdfNo"), "err");
+        else { setStatus(t("pdfFail"), "err"); if (window.console) console.error(err); }
+      }).then(function () { stage.innerHTML = ""; busy = false; $("btn-pdf").disabled = false; });
+  });
+
+  $("btn-print").addEventListener("click", function () { window.print(); });
+  window.addEventListener("beforeprint", function () { wrap.style.zoom = ""; });
+  window.addEventListener("afterprint", fit);
+  window.addEventListener("resize", fit);
+
+  var savedLang = store("resume-lang");
+  if (savedLang === "en" || savedLang === "ko") lang = savedLang;
+  render();
+  fetch(DATA_PATH, { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      var local = null;
+      try { local = JSON.parse(localStorage.getItem("resume-state") || "null"); } catch (e) {}
+      state = local && local.version >= d.version ? local : d;
+      render();
+    })
+    .catch(function () { sheet.innerHTML = '<div class="loading">' + t("loadFail") + "</div>"; });
+})();
+</script>
+
+</body>
+</html>
